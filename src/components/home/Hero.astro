@@ -165,11 +165,13 @@ const art = cells
 
   .beat {
     position: absolute;
-    left: 50%;
+    left: var(--gutter);
+    right: var(--gutter);
     top: 50%;
-    translate: -50% -50%;
-    width: min(100% - 2 * var(--gutter), 44rem);
+    max-width: 44rem;
+    margin-inline: auto;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     justify-items: center;
     gap: 1.25rem;
     padding: clamp(1.75rem, 4vw, 3rem);
@@ -179,13 +181,13 @@ const art = cells
     border-radius: 18px;
     box-shadow: 0 30px 80px -40px rgb(14 16 20 / 0.35);
     opacity: 0;
-    transform: translateY(16px) scale(0.98);
+    transform: translateY(calc(-50% + 16px)) scale(0.98);
     transition: opacity 0.35s var(--ease), transform 0.35s var(--ease);
     pointer-events: none;
   }
   .beat:global(.is-on) {
     opacity: 1;
-    transform: none;
+    transform: translateY(-50%);
     transition-delay: 0.18s;
   }
   .label {
@@ -200,10 +202,12 @@ const art = cells
     max-width: 100%;
   }
   .eth {
-    height: clamp(44px, 8vw, 84px);
+    width: clamp(16.5rem, 48vw, 31.5rem);
+    height: auto;
   }
   .fzj {
-    height: clamp(56px, 9vw, 96px);
+    width: clamp(12rem, 31vw, 20.625rem);
+    height: auto;
   }
   .sq {
     height: clamp(64px, 11vw, 120px);
@@ -285,6 +289,7 @@ const art = cells
     position: relative;
     height: auto;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2rem;
     justify-items: center;
     padding: 70vh var(--gutter) 4rem;
@@ -303,6 +308,9 @@ const art = cells
   .hero:global(.is-static) .title {
     justify-self: stretch;
     margin-top: -40vh;
+  }
+  .hero:global(.is-static) .beat {
+    width: 100%;
   }
   .hero:global(.is-static) .skills {
     position: relative;
