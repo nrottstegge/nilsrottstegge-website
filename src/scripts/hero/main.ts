@@ -10,7 +10,7 @@ const GLYPH: [number, number][] = [
 
 interface Box {
   el: HTMLElement;
-  seed: Element | null;
+  seed: SVGRectElement | null;
   glyph: number; // index into GLYPH, or -1
   from: { x: number; y: number; s: number };
   to: { x: number; y: number; s: number };
@@ -22,6 +22,7 @@ export function init(scene: HTMLElement) {
   const title = scene.querySelector<HTMLElement>('[data-title]')!;
   const veil = scene.querySelector<HTMLElement>('.veil')!;
   const cta = scene.querySelector<HTMLElement>('[data-cta]')!;
+  const leaves = [...scene.querySelectorAll<SVGRectElement>('.art rect')];
   const beats = [...scene.querySelectorAll<HTMLElement>('[data-range]')].map((el) => ({
     el,
     range: el.dataset.range!.split(',').map(Number),
@@ -30,7 +31,7 @@ export function init(scene: HTMLElement) {
     const k = Number(el.dataset.k);
     return {
       el,
-      seed: scene.querySelector(`rect[data-k="${k}"]`),
+      seed: null,
       glyph: el.classList.contains('extra') ? -1 : k,
       from: { x: 0, y: 0, s: 1 },
       to: { x: 0, y: 0, s: 1 },
@@ -57,13 +58,46 @@ export function init(scene: HTMLElement) {
     const oy = Math.max(64, (room - (gh * unit + (gh - 1) * gap)) / 2 + 48);
     scene.classList.toggle('tiny', unit < 36);
     const font = `${Math.max(7, Math.min(11, unit / 6))}px`;
-    for (const b of boxes) {
+
+    // The SVG uses `slice`, so the visible leaves change with the screen shape.
+    // Measure first, then choose distinct cells inside the actual cropped artwork.
+    const margin = 16;
+    const top = parseFloat(getComputedStyle(scene).getPropertyValue('--header-h')) + margin;
+    const visible = leaves.map((el) => ({ el, rect: el.getBoundingClientRect() })).filter(({ rect: r }) =>
+      r.left >= sr.left + margin && r.right <= sr.right - margin &&
+      r.top >= sr.top + top && r.bottom <= sr.bottom - margin,
+    );
+    const preferred = visible.filter(({ rect: r }) =>
+      r.width >= Math.min(unit, 32) && r.width <= Math.max(unit, 72),
+    );
+    const available = preferred.length >= boxes.length ? preferred : visible;
+    const cols = Math.ceil(Math.sqrt(boxes.length * sr.width / (sr.height - top - margin)));
+    const rows = Math.ceil(boxes.length / cols);
+    for (const b of boxes) b.seed?.removeAttribute('data-k');
+
+    for (const [i, b] of boxes.entries()) {
+      const tx = sr.left + margin + ((i % cols + 0.5) / cols) * (sr.width - 2 * margin);
+      const ty = sr.top + top + ((Math.floor(i / cols) + 0.5) / rows) * (sr.height - top - margin);
+      let nearest = 0;
+      let distance = Infinity;
+      available.forEach(({ rect: r }, index) => {
+        const d = ((r.left + r.width / 2 - tx) / sr.width) ** 2 +
+          ((r.top + r.height / 2 - ty) / sr.height) ** 2;
+        if (d < distance) {
+          nearest = index;
+          distance = d;
+        }
+      });
+      const source = available.splice(nearest, 1)[0];
+      b.seed = source?.el ?? null;
+      b.el.style.visibility = source ? '' : 'hidden';
+      if (!source) continue;
+      source.el.dataset.k = b.el.dataset.k;
       b.el.style.width = b.el.style.height = `${unit}px`;
       b.el.style.fontSize = font;
-      const r = b.seed?.getBoundingClientRect();
-      b.from = r
-        ? { x: r.left - sr.left, y: r.top - sr.top, s: Math.max(r.width, 18) / unit }
-        : { x: sr.width / 2, y: sr.height / 2, s: 0.3 };
+      const r = source.rect;
+      // Keep the exact source size: enlarging tiny cells makes boxes cross leaf borders.
+      b.from = { x: r.left - sr.left, y: r.top - sr.top, s: r.width / unit };
       if (b.glyph >= 0) {
         let [gx, gy] = GLYPH[b.glyph];
         if (portrait && gx >= 5) [gx, gy] = [gx - 5, gy + 6];
@@ -89,6 +123,7 @@ export function init(scene: HTMLElement) {
     const appear = segment(p, 0.7, 0.77);
     const fly = segment(p, 0.77, 0.9);
     boxes.forEach((b, i) => {
+      if (!b.seed) return;
       const d = i / boxes.length;
       const shown = smooth(segment(appear, d * 0.6, d * 0.6 + 0.4));
       let opacity = shown;

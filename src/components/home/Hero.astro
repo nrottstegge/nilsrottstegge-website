@@ -9,20 +9,11 @@ const ROWS = 3;
 const S = 1000; // SVG user units per root square
 const cells = quadtreeArt(COLS, ROWS);
 
-// Cells the skill boxes start from: small, near the middle, spread over the art.
 const skills = [...glyphSkills, ...moreSkills];
-const candidates = cells
-  .map((c, i) => ({ c, i }))
-  .filter(({ c }) => c.level >= 3 && c.x > 0.6 && c.x < COLS - 0.6 && c.y > 0.55 && c.y < ROWS - 0.55);
-const step = candidates.length / skills.length;
-const seeds = new Map(skills.map((_, k) => [candidates[Math.floor(k * step)].i, k]));
 const n = (v: number) => Math.round(v * S);
 // Plain markup: keeps the ~1,200 cells free of per-element scoping attributes.
 const art = cells
-  .map((c, i) => {
-    const k = seeds.get(i);
-    return `<rect x="${n(c.x)}" y="${n(c.y)}" width="${n(c.s)}" height="${n(c.s)}" class="s${c.shade}"${k === undefined ? '' : ` data-k="${k}"`}/>`;
-  })
+  .map((c) => `<rect x="${n(c.x)}" y="${n(c.y)}" width="${n(c.s)}" height="${n(c.s)}" class="s${c.shade}"/>`)
   .join('');
 ---
 
@@ -252,6 +243,7 @@ const art = cells
     border: 1px solid var(--fg);
     opacity: 0;
     transform-origin: 0 0;
+    overflow: hidden;
     will-change: transform, opacity;
   }
   .hero:global(.tiny) .box {
