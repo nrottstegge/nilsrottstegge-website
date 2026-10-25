@@ -48,6 +48,7 @@ export function init(scene: HTMLElement) {
   const layout = () => {
     const sr = stage.getBoundingClientRect();
     const portrait = sr.width < sr.height;
+    const phone = sr.width <= 600;
     // Side by side on wide screens; C above V on portrait screens.
     const gw = portrait ? 5 : 10;
     const gh = portrait ? 11 : 5;
@@ -68,7 +69,8 @@ export function init(scene: HTMLElement) {
       r.top >= sr.top + top && r.bottom <= sr.bottom - margin,
     );
     const preferred = visible.filter(({ rect: r }) =>
-      r.width >= Math.min(unit, 32) && r.width <= Math.max(unit, 72),
+      r.width >= (phone ? sr.width / 100 : Math.min(unit, 32)) &&
+      r.width <= (phone ? sr.width / 10 : Math.max(unit, 72)),
     );
     const available = preferred.length >= boxes.length ? preferred : visible;
     const cols = Math.ceil(Math.sqrt(boxes.length * sr.width / (sr.height - top - margin)));
@@ -78,11 +80,14 @@ export function init(scene: HTMLElement) {
     for (const [i, b] of boxes.entries()) {
       const tx = sr.left + margin + ((i % cols + 0.5) / cols) * (sr.width - 2 * margin);
       const ty = sr.top + top + ((Math.floor(i / cols) + 0.5) / rows) * (sr.height - top - margin);
+      // On phones, favor small leaves with a few medium and larger accents.
+      const sourceWidth = [8, 16, 8, 32, 8, 16, 8][i % 7] * sr.width / 390;
       let nearest = 0;
       let distance = Infinity;
       available.forEach(({ rect: r }, index) => {
         const d = ((r.left + r.width / 2 - tx) / sr.width) ** 2 +
-          ((r.top + r.height / 2 - ty) / sr.height) ** 2;
+          ((r.top + r.height / 2 - ty) / sr.height) ** 2 +
+          (phone ? 4 * Math.log2(r.width / sourceWidth) ** 2 : 0);
         if (d < distance) {
           nearest = index;
           distance = d;
