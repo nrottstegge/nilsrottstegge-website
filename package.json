@@ -1,0 +1,30 @@
+{
+  "name": "nilsrottstegge-website",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "cv": {
+    "file": "resume-en-web.pdf"
+  },
+  "scripts": {
+    "prepare": "node scripts/install-git-hooks.mjs",
+    "dev": "astro dev",
+    "prebuild": "node scripts/sync-cv.mjs --validate",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "assets:cv": "node scripts/sync-cv.mjs",
+    "assets:media": "bash scripts/build-media.sh",
+    "assets:figures": "python3 scripts/build-figures.py",
+    "assets:logos": "python3 scripts/build-logos.py",
+    "assets:grid": "node scripts/build-hpcg-grid.mjs",
+    "assets:scaling": "node scripts/build-weak-scaling.mjs"
+  },
+  "dependencies": {
+    "astro": "7.3.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "typescript": "6.0.3"
+  }
+}

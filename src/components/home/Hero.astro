@@ -1,0 +1,333 @@
+---
+import CvLinks from '../CvLinks.astro';
+import { quadtreeArt } from '../../lib/quadtree-art';
+import { glyphSkills, moreSkills } from '../../data/profile';
+import { withBase } from '../../lib/paths';
+
+const COLS = 4;
+const ROWS = 3;
+const S = 1000; // SVG user units per root square
+const cells = quadtreeArt(COLS, ROWS);
+
+// Cells the skill boxes start from: small, near the middle, spread over the art.
+const skills = [...glyphSkills, ...moreSkills];
+const candidates = cells
+  .map((c, i) => ({ c, i }))
+  .filter(({ c }) => c.level >= 3 && c.x > 0.6 && c.x < COLS - 0.6 && c.y > 0.55 && c.y < ROWS - 0.55);
+const step = candidates.length / skills.length;
+const seeds = new Map(skills.map((_, k) => [candidates[Math.floor(k * step)].i, k]));
+const n = (v: number) => Math.round(v * S);
+// Plain markup: keeps the ~1,200 cells free of per-element scoping attributes.
+const art = cells
+  .map((c, i) => {
+    const k = seeds.get(i);
+    return `<rect x="${n(c.x)}" y="${n(c.y)}" width="${n(c.s)}" height="${n(c.s)}" class="s${c.shade}"${k === undefined ? '' : ` data-k="${k}"`}/>`;
+  })
+  .join('');
+---
+
+<section class="hero" id="top" aria-labelledby="hero-name">
+  <div class="stage">
+    <svg
+      class="art"
+      viewBox={`0 0 ${COLS * S} ${ROWS * S}`}
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+      set:html={art}
+    />
+    <div class="veil" aria-hidden="true"></div>
+
+    <div class="title" data-title>
+      <p class="mono kicker">High-Performance Computing · GPU Computing</p>
+      <h1 id="hero-name">Nils<br />Rottstegge</h1>
+      <p class="sub">M.Sc. Computer Science, ETH Zurich</p>
+      <p class="mono scroll" aria-hidden="true">Scroll <span>↓</span></p>
+    </div>
+
+    <div class="beat" data-range="0.1,0.27">
+      <p class="mono label">Studying at</p>
+      <img class="logo eth" src={withBase('/media/logos/eth.webp')} width="1201" height="200" alt="ETH Zürich" decoding="async" />
+      <p class="line">M.Sc. Computer Science, major in Data Management Systems</p>
+    </div>
+
+    <div class="beat" data-range="0.3,0.47">
+      <p class="mono label">Worked at</p>
+      <img class="logo fzj" src={withBase('/media/logos/fzj.svg')} width="371" height="108" alt="Forschungszentrum Jülich" decoding="async" />
+      <p class="line">Jülich Supercomputing Centre, Guest Student Programme 2026</p>
+    </div>
+
+    <div class="beat" data-range="0.5,0.67">
+      <p class="mono label">Computed on</p>
+      <div class="pair">
+        <figure>
+          <img class="logo sq" src={withBase('/media/logos/alps.webp')} width="364" height="180" alt="ALPS" decoding="async" />
+          <figcaption>CSCS, Lugano</figcaption>
+        </figure>
+        <figure>
+          <img class="logo sq" src={withBase('/media/logos/jupiter.webp')} width="128" height="128" alt="JUPITER" decoding="async" />
+          <figcaption>JUPITER, Jülich</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="skills" aria-hidden="true">
+      {skills.map((s, k) => <span class:list={['box', { extra: k >= glyphSkills.length }]} data-k={k}>{s}</span>)}
+    </div>
+    <div class="cta" data-cta>
+      <h2>My CV.</h2>
+      <p>One page, as a PDF.</p>
+      <CvLinks />
+    </div>
+    <p class="visually-hidden">Skills: {skills.join(', ')}.</p>
+  </div>
+</section>
+
+<script>
+  const scene = document.getElementById('top')!;
+  const start = () => import('../../scripts/hero/main').then((m) => m.init(scene));
+  if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 600 });
+  else setTimeout(start, 100);
+</script>
+
+<style>
+  /* A tall scroll track with a sticky full-viewport stage. */
+  .hero {
+    position: relative;
+    height: 600vh;
+  }
+  .stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100svh;
+    overflow: hidden;
+  }
+  .art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .art :global(rect) {
+    stroke: var(--bg);
+    stroke-width: 3.5;
+  }
+  .art :global(.s0) { fill: #eeeeec; }
+  .art :global(.s1) { fill: #e6e6e4; }
+  .art :global(.s2) { fill: #dddddb; }
+  .art :global(.s3) { fill: #d3d3d2; }
+  .art :global(.s4) { fill: #c8c8c8; }
+  .art :global(.s5) { fill: #bcbcbd; }
+  .veil {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .title {
+    position: absolute;
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: clamp(48px, 11vh, 130px);
+    will-change: opacity, transform;
+  }
+  .kicker {
+    color: var(--fg-2);
+    margin-bottom: 1rem;
+  }
+  h1 {
+    font-size: clamp(3.4rem, 13vw, 11.5rem);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 0.88;
+    text-transform: uppercase;
+  }
+  .sub {
+    margin-top: 1.25rem;
+    color: var(--fg-2);
+    font-size: clamp(1rem, 1.6vw, 1.3rem);
+  }
+  .scroll {
+    margin-top: 2rem;
+    color: var(--muted);
+  }
+  .scroll span {
+    display: inline-block;
+    animation: nudge 2s var(--ease) infinite;
+  }
+  @keyframes nudge {
+    50% {
+      transform: translateY(4px);
+    }
+  }
+
+  .beat {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: min(100% - 2 * var(--gutter), 44rem);
+    display: grid;
+    justify-items: center;
+    gap: 1.25rem;
+    padding: clamp(1.75rem, 4vw, 3rem);
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 30px 80px -40px rgb(14 16 20 / 0.35);
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+    transition: opacity 0.35s var(--ease), transform 0.35s var(--ease);
+    pointer-events: none;
+  }
+  .beat:global(.is-on) {
+    opacity: 1;
+    transform: none;
+    transition-delay: 0.18s;
+  }
+  .label {
+    color: var(--muted);
+  }
+  .line {
+    color: var(--fg-2);
+    font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+  }
+  .logo {
+    width: auto;
+    max-width: 100%;
+  }
+  .eth {
+    height: clamp(44px, 8vw, 84px);
+  }
+  .fzj {
+    height: clamp(56px, 9vw, 96px);
+  }
+  .sq {
+    height: clamp(64px, 11vw, 120px);
+  }
+  .pair {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: end;
+    gap: clamp(1.5rem, 6vw, 4.5rem);
+  }
+  .pair figure {
+    margin: 0;
+    display: grid;
+    justify-items: center;
+    gap: 0.6rem;
+  }
+  figcaption {
+    font: 0.6875rem var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .skills {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .box {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: grid;
+    place-items: center;
+    padding: 4px;
+    font: 500 11px/1.15 var(--mono);
+    text-align: center;
+    hyphens: none;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--fg);
+    opacity: 0;
+    transform-origin: 0 0;
+    will-change: transform, opacity;
+  }
+  .hero:global(.tiny) .box {
+    color: transparent;
+  }
+  .cta {
+    position: absolute;
+    left: 50%;
+    bottom: clamp(24px, 6vh, 64px);
+    translate: -50% 0;
+    width: min(100% - 2 * var(--gutter), 34rem);
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s var(--ease), visibility 0.4s;
+  }
+  .cta:global(.is-on) {
+    opacity: 1;
+    visibility: visible;
+  }
+  .cta h2 {
+    font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+    font-weight: 900;
+  }
+  .cta p {
+    margin: 0.3rem 0 1.1rem;
+    color: var(--fg-2);
+  }
+
+  /* Reduced motion: a static sequence. */
+  .hero:global(.is-static) {
+    height: auto;
+  }
+  .hero:global(.is-static) .stage {
+    position: relative;
+    height: auto;
+    display: grid;
+    gap: 2rem;
+    justify-items: center;
+    padding: 70vh var(--gutter) 4rem;
+  }
+  .hero:global(.is-static) .art {
+    height: 100svh;
+  }
+  .hero:global(.is-static) :is(.title, .beat, .cta) {
+    position: relative;
+    inset: auto;
+    translate: none;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+  .hero:global(.is-static) .title {
+    justify-self: stretch;
+    margin-top: -40vh;
+  }
+  .hero:global(.is-static) .skills {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    max-width: 44rem;
+  }
+  .hero:global(.is-static) .box {
+    position: static;
+    opacity: 1;
+    padding: 0.4rem 0.6rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero {
+      height: auto;
+    }
+    .stage {
+      position: relative;
+      height: auto;
+      min-height: 100svh;
+    }
+    .scroll span {
+      animation: none;
+    }
+  }
+</style>

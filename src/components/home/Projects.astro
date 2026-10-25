@@ -1,0 +1,116 @@
+---
+import Media from '../Media.astro';
+import { projects } from '../../data/projects';
+import { withBase } from '../../lib/paths';
+---
+
+<section class="projects wrap" id="projects" aria-labelledby="projects-title">
+  <header class="head">
+    <p class="mono label">Projects</p>
+    <h2 id="projects-title">Selected work</h2>
+    <p class="intro">Adaptive trees, sparse matrix formats, multi-GPU solvers and PDEs on GPUs.</p>
+  </header>
+  <ul class="grid">
+    {
+      projects.map((p) => (
+        <li class="card">
+          <Media media={p.cover ?? p.media[0]} />
+          <div class="text">
+            <p class="mono kicker">{p.kicker}</p>
+            <h3>
+              <a href={withBase(`/projects/${p.slug}/`)} data-astro-prefetch>
+                {p.title}
+              </a>
+            </h3>
+            <p class="short">{p.short}</p>
+            <ul class="tags">
+              {p.tech.slice(0, 4).map((x) => (
+                <li>{x}</li>
+              ))}
+            </ul>
+            <a class="more" href={withBase(`/projects/${p.slug}/`)} aria-hidden="true" tabindex="-1">
+              View project →
+            </a>
+          </div>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .projects {
+    padding-block: clamp(5rem, 14vh, 9rem) 2rem;
+  }
+  .label {
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  h2 {
+    font-size: clamp(2.2rem, 5vw, 4rem);
+    font-weight: 900;
+  }
+  .intro {
+    margin-top: 1rem;
+    max-width: 38rem;
+    color: var(--fg-2);
+    font-size: 1.125rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+    gap: clamp(2.5rem, 5vw, 4rem) clamp(1.5rem, 3vw, 2.5rem);
+    margin: 3rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .card {
+    display: grid;
+    align-content: start;
+    gap: 1rem;
+  }
+  .text {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .kicker {
+    color: var(--muted);
+    font-size: 0.6875rem;
+  }
+  h3 {
+    font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+    font-weight: 900;
+  }
+  h3 a {
+    text-decoration: none;
+  }
+  h3 a:hover {
+    text-decoration: underline;
+  }
+  .short {
+    color: var(--fg-2);
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.25rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .tags li {
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    font: 0.6875rem var(--mono);
+  }
+  .more {
+    margin-top: 0.4rem;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    text-decoration: none;
+  }
+  .more:hover {
+    text-decoration: underline;
+  }
+</style>

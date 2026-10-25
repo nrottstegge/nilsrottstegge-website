@@ -1,0 +1,21 @@
+---
+import { cvFile } from '../data/profile';
+---
+
+<div class="cv-links">
+  <a class="btn btn--solid" href={cvFile} target="_blank" rel="noopener">
+    Open CV <span class="visually-hidden">(PDF)</span><span aria-hidden="true">↗</span>
+  </a>
+  <a class="btn" href={cvFile} download="Nils-Rottstegge-CV.pdf">
+    Download PDF <span aria-hidden="true">↓</span>
+  </a>
+</div>
+
+<style>
+  .cv-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+</style>

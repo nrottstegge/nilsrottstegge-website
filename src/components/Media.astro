@@ -1,0 +1,96 @@
+---
+// Footage (muted loop, loaded and played only while visible), a still figure,
+// or an interactive figure.
+import type { Media } from '../data/projects';
+import HbdiaFigure from './HbdiaFigure.astro';
+import HpcgSpeedup from './HpcgSpeedup.astro';
+import HpcgWeakScaling from './HpcgWeakScaling.astro';
+import BoxColouring from './BoxColouring.astro';
+import { withBase } from '../lib/paths';
+
+interface Props {
+  media: Media;
+  eager?: boolean;
+  /** Full interactive controls (project pages). */
+  full?: boolean;
+}
+
+const { media: m, eager = false, full = false } = Astro.props;
+---
+
+<figure class:list={['media', { paper: m.paper, live: m.interactive, clip: m.video }]}>
+  {
+    m.interactive === 'hbdia' ? (
+      <HbdiaFigure controls={full} />
+    ) : m.interactive === 'hpcg-speedup' ? (
+      <HpcgSpeedup />
+    ) : m.interactive === 'hpcg-weak-scaling' ? (
+      <HpcgWeakScaling />
+    ) : m.interactive === 'box-colouring' ? (
+      <BoxColouring />
+    ) : m.video ? (
+      <video
+        muted
+        loop
+        playsinline
+        preload="none"
+        data-poster={withBase(`${m.video}.webp`)}
+        data-av1={withBase(`${m.video}.av1.mp4`)}
+        data-h264={withBase(`${m.video}.h264.mp4`)}
+        aria-label={m.alt}
+      />
+    ) : (
+      <img src={m.image && withBase(m.image)} alt={m.alt} loading={eager ? 'eager' : 'lazy'} decoding="async" />
+    )
+  }
+  <slot />
+</figure>
+
+<script>
+  // Attach sources when near the viewport; play only while visible.
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const videos = [...document.querySelectorAll<HTMLVideoElement>('video[data-h264]')];
+  const av1 = document.createElement('video').canPlayType('video/mp4; codecs="av01.0.05M.08"') === 'probably';
+  const io = new IntersectionObserver(
+    (records) => {
+      for (const r of records) {
+        const v = r.target as HTMLVideoElement;
+        if (r.isIntersecting && !v.src) {
+          v.poster = v.dataset.poster!;
+          v.src = (av1 ? v.dataset.av1 : v.dataset.h264)!;
+        }
+        if (reduce) continue;
+        if (r.intersectionRatio > 0.4) v.play().catch(() => {});
+        else v.pause();
+      }
+    },
+    { threshold: [0, 0.4], rootMargin: '200px 0px' },
+  );
+  videos.forEach((v) => io.observe(v));
+</script>
+
+<style>
+  .media {
+    position: relative;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .media > video,
+  .media > img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+  }
+  .media > video {
+    background: #000;
+  }
+  .paper > img {
+    object-fit: contain;
+    padding: 3%;
+    background: var(--surface);
+  }
+</style>

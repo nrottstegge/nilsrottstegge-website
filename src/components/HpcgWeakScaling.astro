@@ -1,0 +1,181 @@
+---
+// HPCG weak scaling (thesis Fig. 3.6): time per CG iteration with 32³ points per GPU.
+import { weakScaling } from '../data/hpcg-weak-scaling';
+
+const W = 640;
+const H = 330;
+const L = 58;
+const R = 24;
+const T = 22;
+const B = 48;
+const XMAX = 1800;
+const YMAX = 370;
+const x = (g: number) => L + (g / XMAX) * (W - L - R);
+const y = (ms: number) => T + (1 - ms / YMAX) * (H - T - B);
+const fmt = (n: number) => n.toLocaleString('en-US');
+const points = (g: number) => {
+  const p = g * 32 ** 3;
+  return p >= 1e6 ? `${(p / 1e6).toFixed(1)}M points` : `${Math.round(p / 1e3)}K points`;
+};
+
+const path = weakScaling.map((p, i) => `${i ? 'L' : 'M'}${x(p.gpus).toFixed(1)},${y(p.ms).toFixed(1)}`).join('');
+const plateau = weakScaling.at(-1)!.ms;
+// Labelled points: [dx, dy, anchor] relative to the point.
+const labelled = new Map<number, [number, number, string]>([
+  [1, [10, 4, 'start']],
+  [64, [10, 12, 'start']],
+  [343, [0, 22, 'middle']],
+  [1728, [0, 22, 'end']],
+]);
+const ramp = 216; // most processes have their full 26 neighbours from here on
+---
+
+<figure class="weak" data-weak>
+  <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="weak-title">
+    <title id="weak-title">
+      Time per CG iteration: {weakScaling.map((p) => `${p.gpus} GPUs ${p.ms} ms`).join(', ')}
+    </title>
+    <rect x={x(0)} y={T} width={x(ramp) - x(0)} height={H - T - B} class="ramp" />
+    <text x={x(ramp) + 8} y={H - B - 40} class="note">← GPUs gain halo neighbours</text>
+    <text x={x(ramp) + 8} y={H - B - 26} class="note">(up to 26 each)</text>
+
+    {
+      [0, 100, 200, 300].map((v) => (
+        <g>
+          <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} class="grid" />
+          <text x={L - 8} y={y(v) + 4} class="tick" text-anchor="end">{v}</text>
+        </g>
+      ))
+    }
+    {
+      [1, 500, 1000, 1500].map((v) => (
+        <text x={x(v)} y={H - B + 18} class="tick" text-anchor="middle">{fmt(v)}</text>
+      ))
+    }
+    <text x={(L + W - R) / 2} y={H - 8} class="axis" text-anchor="middle">GPUs (NVIDIA GH200)</text>
+    <text x="14" y={(T + H - B) / 2} class="axis" text-anchor="middle" transform={`rotate(-90 14 ${(T + H - B) / 2})`}>
+      ms per CG iteration
+    </text>
+
+    <line x1={x(ramp)} x2={W - R} y1={y(plateau)} y2={y(plateau)} class="ideal" />
+    <text x={W - R} y={y(plateau) - 34} class="note" text-anchor="end">flat from 216 to 1,728 GPUs:</text>
+    <text x={W - R} y={y(plateau) - 20} class="note strong" text-anchor="end">283–300 ms per iteration</text>
+
+    <path d={path} class="line" pathLength="1" />
+    {
+      weakScaling.map((p, i) => (
+        <g class="pt" style={`--i:${i}`}>
+          <circle cx={x(p.gpus)} cy={y(p.ms)} r="4.5">
+            <title>{`${fmt(p.gpus)} GPUs · ${points(p.gpus)} · ${p.ms} ms (10 runs: ${p.min}–${p.max})`}</title>
+          </circle>
+          {labelled.has(p.gpus) && (
+            <text
+              x={x(p.gpus) + labelled.get(p.gpus)![0]}
+              y={y(p.ms) + labelled.get(p.gpus)![1]}
+              class="lbl"
+              text-anchor={labelled.get(p.gpus)![2]}
+            >
+              {`${fmt(p.gpus)} GPU${p.gpus > 1 ? 's' : ''} · ${points(p.gpus)}`}
+            </text>
+          )}
+        </g>
+      ))
+    }
+  </svg>
+</figure>
+
+<script>
+  for (const el of document.querySelectorAll<HTMLElement>('[data-weak]')) {
+    const io = new IntersectionObserver(
+      (r) => {
+        if (!r[0].isIntersecting) return;
+        el.classList.add('is-in');
+        io.disconnect();
+      },
+      { threshold: 0.4 },
+    );
+    io.observe(el);
+  }
+</script>
+
+<style>
+  .weak {
+    margin: 0;
+    padding: clamp(1rem, 2.5vw, 1.75rem);
+    background: var(--surface);
+  }
+  svg {
+    width: 100%;
+    height: auto;
+    font-family: var(--font);
+  }
+  .ramp {
+    fill: #f1f1ef;
+  }
+  .grid {
+    stroke: var(--line);
+  }
+  .tick,
+  .lbl {
+    font: 10px var(--mono);
+    fill: var(--muted);
+  }
+  .lbl {
+    fill: var(--fg-2);
+  }
+  .axis {
+    font-size: 11px;
+    fill: var(--muted);
+  }
+  .note {
+    font-size: 11px;
+    fill: var(--muted);
+  }
+  .note.strong {
+    font-weight: 700;
+    fill: var(--fg);
+  }
+  .ideal {
+    stroke: var(--cpu);
+    stroke-width: 1.25;
+    stroke-dasharray: 4 3;
+  }
+  .line {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 2;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+  .pt circle {
+    fill: var(--surface);
+    stroke: var(--fg);
+    stroke-width: 2;
+    cursor: help;
+  }
+  .pt circle:hover {
+    fill: var(--fg);
+  }
+  /* The line draws itself left to right, points pop in behind it. */
+  .weak:not(:global(.is-in)) .line {
+    stroke-dashoffset: 1;
+  }
+  .weak:not(:global(.is-in)) .pt {
+    opacity: 0;
+  }
+  .line {
+    transition: stroke-dashoffset 1.4s var(--ease);
+  }
+  .pt {
+    transition: opacity 0.3s;
+    transition-delay: calc(var(--i) * 100ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .weak:not(:global(.is-in)) .line {
+      stroke-dashoffset: 0;
+    }
+    .weak:not(:global(.is-in)) .pt {
+      opacity: 1;
+    }
+  }
+</style>

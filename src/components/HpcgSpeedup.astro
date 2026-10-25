@@ -1,0 +1,193 @@
+---
+// Speedup of each step of the multi-GPU HPCG port over the original single-GPU code,
+// all measured on one GH200 (256³ grid, multi-GPU code path, 30 runs).
+// Source: bachelor thesis, Sections 3.2 and 3.3 (Figures 3.1 and 3.3).
+interface Step {
+  label: string;
+  ms: number;
+  /** Speedup as reported in the thesis (rounded there from unrounded runtimes). */
+  x: number;
+}
+
+const kernels: { name: string; what: string; digits: number; steps: Step[] }[] = [
+  {
+    name: 'SpMV',
+    what: 'sparse matrix-vector product',
+    digits: 2,
+    steps: [
+      { label: 'Single-GPU code', ms: 1.61, x: 1 },
+      { label: 'Naive multi-GPU port', ms: 5.02, x: 0.32 },
+      { label: 'Locality-optimised indexing', ms: 1.5, x: 1.07 },
+      { label: 'Column-major DIA', ms: 1.07, x: 1.5 },
+      { label: 'Blocked storage', ms: 1.1, x: 1.46 },
+      { label: 'Pipelined memcpy', ms: 2.15, x: 0.75 },
+      { label: 'Colour-wise storage', ms: 2.23, x: 0.72 },
+    ],
+  },
+  {
+    name: 'SymGS',
+    what: 'symmetric Gauss-Seidel, one colour sweep',
+    digits: 3,
+    steps: [
+      { label: 'Single-GPU code', ms: 0.185, x: 1 },
+      { label: 'Naive multi-GPU port', ms: 0.271, x: 0.68 },
+      { label: 'Locality-optimised indexing', ms: 0.172, x: 1.07 },
+      { label: 'Column-major DIA', ms: 0.178, x: 1.04 },
+      { label: 'Colour-wise storage', ms: 0.104, x: 1.78 },
+    ],
+  },
+];
+
+const W = 560;
+const LEFT = 190;
+const ROW = 34;
+const MAX = 1.9; // speedup at the right edge
+const x = (s: number) => LEFT + (s / MAX) * (W - LEFT - 125); // room for the value labels
+---
+
+<div class="speedup" data-speedup>
+  {
+    kernels.map((k) => {
+      const best = Math.max(...k.steps.slice(1).map((s) => s.x));
+      const H = 44 + k.steps.length * ROW + 26;
+      return (
+        <figure class="chart">
+          <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={`t-${k.name}`}>
+            <title id={`t-${k.name}`}>
+              {`${k.name} speedup over the single-GPU code: ` +
+                k.steps.map((s) => `${s.label} ${s.x.toFixed(2)}×`).join(', ')}
+            </title>
+            <text x="0" y="18" class="name">{k.name}</text>
+            <text x="0" y="34" class="what">{k.what}</text>
+            {k.steps.map((s, i) => {
+              const y = 44 + i * ROW;
+              const cls = i === 0 ? 'base' : s.x === best ? 'best' : s.x < 1 ? 'slow' : 'fast';
+              return (
+                <g class={`row ${cls}`} style={`--i:${i}`}>
+                  <text x={LEFT - 10} y={y + 20} class="label" text-anchor="end">
+                    {s.label}
+                  </text>
+                  <rect x={LEFT} y={y + 6} width={x(s.x) - LEFT} height={ROW - 12} rx="2" class="bar" />
+                  <text x={x(s.x) + 8} y={y + 20} class="val">
+                    {`${s.x.toFixed(2)}×`}
+                    <tspan class="ms">{` ${s.ms.toFixed(k.digits)} ms`}</tspan>
+                  </text>
+                </g>
+              );
+            })}
+            <line x1={x(1)} y1="40" x2={x(1)} y2={H - 22} class="one" />
+            <text x={x(1)} y={H - 6} class="axis" text-anchor="middle">
+              1× = single-GPU code
+            </text>
+          </svg>
+        </figure>
+      );
+    })
+  }
+</div>
+
+<script>
+  for (const el of document.querySelectorAll<HTMLElement>('[data-speedup]')) {
+    const io = new IntersectionObserver(
+      (r) => {
+        if (!r[0].isIntersecting) return;
+        el.classList.add('is-in');
+        io.disconnect();
+      },
+      { threshold: 0.3 },
+    );
+    io.observe(el);
+  }
+</script>
+
+<style>
+  .speedup {
+    display: grid;
+    justify-content: center;
+    grid-template-columns: minmax(0, 40rem);
+    gap: 2rem;
+    padding: clamp(1rem, 2.5vw, 1.75rem);
+    background: var(--surface);
+  }
+  .chart {
+    margin: 0;
+  }
+  svg {
+    width: 100%;
+    height: auto;
+    font-family: var(--font);
+  }
+  .name {
+    font-size: 17px;
+    font-weight: 900;
+    fill: var(--fg);
+  }
+  .what {
+    font-size: 11px;
+    fill: var(--muted);
+  }
+  .label {
+    font-size: 12px;
+    fill: var(--fg-2);
+  }
+  .val {
+    font: 700 12px var(--mono);
+    fill: var(--fg);
+  }
+  .ms {
+    font-weight: 400;
+    fill: var(--muted);
+  }
+  .axis {
+    font: 10px var(--mono);
+    fill: var(--muted);
+  }
+  .one {
+    stroke: var(--cpu);
+    stroke-width: 1.25;
+    stroke-dasharray: 4 3;
+  }
+  .bar {
+    fill: #9aa0a8;
+    transform-box: fill-box;
+    transform-origin: left;
+  }
+  .base .bar {
+    fill: #c9ccd1;
+  }
+  .slow .bar {
+    fill: #d9d9d6;
+  }
+  .fast .bar {
+    fill: #4b5058;
+  }
+  .best .bar {
+    fill: var(--gpu);
+  }
+  .best .label {
+    font-weight: 700;
+    fill: var(--fg);
+  }
+  /* Bars grow in, one after another, when the chart scrolls into view. */
+  .speedup:not(.is-in) .bar {
+    transform: scaleX(0);
+  }
+  .speedup:not(.is-in) .val {
+    opacity: 0;
+  }
+  .bar,
+  .val {
+    transition:
+      transform 0.7s var(--ease),
+      opacity 0.4s;
+    transition-delay: calc(var(--i) * 110ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .speedup:not(.is-in) .bar {
+      transform: none;
+    }
+    .speedup:not(.is-in) .val {
+      opacity: 1;
+    }
+  }
+</style>

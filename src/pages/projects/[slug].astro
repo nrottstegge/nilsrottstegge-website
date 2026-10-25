@@ -1,0 +1,177 @@
+---
+import Base from '../../layouts/Base.astro';
+import Media from '../../components/Media.astro';
+import TreeViewer from '../../components/TreeViewer.astro';
+import { projects, type Project } from '../../data/projects';
+import { withBase } from '../../lib/paths';
+
+export function getStaticPaths() {
+  return projects.map((project) => ({ params: { slug: project.slug }, props: { project } }));
+}
+
+const { project: p } = Astro.props as { project: Project };
+const index = projects.indexOf(p);
+const next = projects[(index + 1) % projects.length];
+---
+
+<Base title={p.title} description={p.short}>
+  <article class="wrap page">
+    <a class="back mono" href={withBase('/#projects')}>← All projects</a>
+    <p class="mono kicker">{p.kicker}</p>
+    <h1>{p.title}</h1>
+    <p class="lead">{p.summary}</p>
+
+    <div class="gallery">
+      {
+        p.media.map((m, i) => (
+          <Media media={m} eager={i === 0} full>
+            <figcaption>{m.caption}</figcaption>
+          </Media>
+        ))
+      }
+    </div>
+
+    {
+      p.viewer && (
+        <section>
+          <h2>Explore the trees in 3D</h2>
+          <TreeViewer scenes={p.viewer} />
+        </section>
+      )
+    }
+
+    <section>
+      <h2>My contribution</h2>
+      <ul class="list">{p.contribution.map((x) => <li>{x}</li>)}</ul>
+    </section>
+
+    <section>
+      <h2>Results</h2>
+      <ul class="list results">{p.results.map((x) => <li>{x}</li>)}</ul>
+    </section>
+
+    <section class="facts">
+      <h2>Technologies</h2>
+      <ul class="tags">{p.tech.map((x) => <li>{x}</li>)}</ul>
+    </section>
+
+    <section>
+      <h2>Links</h2>
+      <ul class="links">
+        {
+          p.links.map((l) => (
+            <li>
+              <a class="btn" href={l.href} rel="noopener">
+                {l.label} <span aria-hidden="true">↗</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <a class="next" href={withBase(`/projects/${next.slug}/`)} data-astro-prefetch>
+      <span class="mono">Next project →</span>
+      <strong>{next.title}</strong>
+    </a>
+  </article>
+</Base>
+
+<style>
+  .page {
+    padding-block: calc(var(--header-h) + 3rem) 5rem;
+    max-width: 56rem;
+  }
+  .back {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .kicker {
+    color: var(--muted);
+    margin: 2rem 0 1rem;
+  }
+  h1 {
+    font-size: clamp(2.4rem, 6vw, 4.5rem);
+    font-weight: 900;
+    margin-bottom: 1.5rem;
+  }
+  .lead {
+    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    color: var(--fg-2);
+  }
+  /* Footage side by side near its native size (640 px wide); figures full width. */
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: 2rem 1.5rem;
+    margin: 3rem 0;
+  }
+  .gallery > :global(.media:not(.clip)) {
+    grid-column: 1 / -1;
+  }
+  .gallery > :global(.clip) {
+    max-width: 640px;
+  }
+  figcaption {
+    padding: 0.75rem 1rem 1rem;
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+  section {
+    margin-top: 3rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin-bottom: 1rem;
+  }
+  .list {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .results li::marker {
+    color: var(--muted);
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .tags li {
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    font: 0.75rem var(--mono);
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .next {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+    text-decoration: none;
+  }
+  .next strong {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    font-weight: 900;
+  }
+  .next .mono {
+    color: var(--muted);
+  }
+</style>

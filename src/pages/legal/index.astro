@@ -1,0 +1,46 @@
+---
+import Base from '../../layouts/Base.astro';
+import { contact } from '../../data/profile';
+---
+
+<Base title="Privacy & contact">
+  <article class="wrap page">
+    <h1>Privacy &amp; contact</h1>
+    <h2>Responsible</h2>
+    <p>{contact.name}, Zurich, Switzerland. Email: <a href={`mailto:${contact.email}`}>{contact.email}</a></p>
+    <h2>Privacy</h2>
+    <p>
+      This is a private, non-commercial portfolio website. It uses no cookies, no tracking and no analytics. Fonts and
+      all other files are served by this website itself; no third-party content is embedded.
+    </p>
+    <p>
+      The website is hosted on GitHub Pages (GitHub, Inc., USA). When you visit, GitHub processes technically necessary
+      data such as your IP address in server logs to deliver and protect the site. Details: GitHub Privacy Statement.
+    </p>
+    <p>
+      If you email me, I use your details only to reply to your message. For access or deletion requests, an email to
+      the address above is enough.
+    </p>
+    <h2>Image credits</h2>
+    <p>Logos: ETH Zürich, Forschungszentrum Jülich, CSCS (ALPS), JSC (JUPITER). GH200 photo: NVIDIA. Simulation footage and figures: my own work with the help of artificial intelligence.</p>
+  </article>
+</Base>
+
+<style>
+  .page {
+    padding-block: calc(var(--header-h) + 5rem) 6rem;
+    max-width: 44rem;
+  }
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    margin-bottom: 2rem;
+  }
+  h2 {
+    font-size: 1.25rem;
+    margin: 2rem 0 0.75rem;
+  }
+  p + p {
+    margin-top: 1rem;
+  }
+</style>

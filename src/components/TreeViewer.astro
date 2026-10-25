@@ -1,0 +1,175 @@
+---
+// Interactive 3D tree viewer: self-contained vtk.js scenes from the Adaptive Trees
+// report. Several MB each, so nothing loads until the visitor asks for it.
+import type { ViewerScene } from '../data/projects';
+import { withBase } from '../lib/paths';
+
+interface Props {
+  scenes: ViewerScene[];
+}
+
+const { scenes } = Astro.props;
+---
+
+<div class="viewer" data-viewer data-scenes={JSON.stringify(scenes.map((scene) => ({ ...scene, url: withBase(scene.url) })))}>
+  <div class="tabs" role="tablist" aria-label="Scenes">
+    {
+      scenes.map((s, i) => (
+        <button role="tab" aria-selected={i === 0 ? 'true' : 'false'} data-i={i}>
+          <span class="n">{i + 1}</span>
+          {s.dataset} <span class="muted">· {s.short}</span>
+        </button>
+      ))
+    }
+  </div>
+  <p class="note" data-note>{scenes[0].note} <span class="mono">{scenes[0].particles} particles</span></p>
+  <div class="stage" data-stage>
+    <div class="start" data-start>
+      <button class="btn btn--solid" data-load>Load interactive 3D viewer</button>
+      <p class="muted">vtk.js scene, about 3–4 MB · drag to rotate, scroll to zoom</p>
+    </div>
+    <button class="expand" data-expand hidden aria-label="Full screen">⤢</button>
+  </div>
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>('[data-viewer]')) {
+    const scenes: { url: string; note: string; particles: string }[] = JSON.parse(root.dataset.scenes!);
+    const stage = root.querySelector<HTMLElement>('[data-stage]')!;
+    const start = root.querySelector<HTMLElement>('[data-start]')!;
+    const note = root.querySelector<HTMLElement>('[data-note]')!;
+    const expand = root.querySelector<HTMLButtonElement>('[data-expand]')!;
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role=tab]')];
+    let current = 0;
+    let loaded = false;
+
+    const show = (i: number) => {
+      current = i;
+      tabs.forEach((t, k) => t.setAttribute('aria-selected', String(k === i)));
+      note.innerHTML = `${scenes[i].note} <span class="mono">${scenes[i].particles} particles</span>`;
+      if (!loaded) return;
+      stage.querySelector('iframe')?.remove();
+      const frame = document.createElement('iframe');
+      frame.src = scenes[i].url;
+      frame.title = `3D tree viewer: ${tabs[i].textContent?.trim()}`;
+      frame.allow = 'fullscreen';
+      stage.prepend(frame);
+    };
+    root.querySelector('[data-load]')!.addEventListener('click', () => {
+      loaded = true;
+      start.remove();
+      expand.hidden = false;
+      show(current);
+    });
+    tabs.forEach((t, i) => t.addEventListener('click', () => show(i)));
+    expand.addEventListener('click', () => stage.requestFullscreen?.());
+  }
+</script>
+
+<style>
+  .viewer {
+    display: grid;
+    /* minmax(0, …): the aspect-ratio stage must not size the track from the viewport. */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    container-type: inline-size;
+  }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  [role='tab'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 0.25rem 0.9rem 0.25rem 0.3rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface);
+    font: 0.875rem var(--font);
+    color: var(--fg-2);
+    cursor: pointer;
+  }
+  [role='tab'][aria-selected='true'] {
+    border-color: var(--fg);
+    color: var(--fg);
+    font-weight: 700;
+  }
+  .n {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    font: 700 0.75rem var(--mono);
+  }
+  [aria-selected='true'] .n {
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--surface);
+  }
+  .note {
+    color: var(--fg-2);
+    font-size: 0.9375rem;
+  }
+  .note :global(.mono) {
+    margin-left: 0.4rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .stage {
+    position: relative;
+    width: 100%;
+    /* 16:10 of the column width, at least 320 px tall, never taller than the screen. */
+    height: clamp(320px, 62.5cqi, 80svh);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+  }
+  .stage :global(iframe) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  .start {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 0.75rem;
+    text-align: center;
+    padding: 1rem;
+    background: radial-gradient(circle at 50% 45%, #2a2e35, #000 70%);
+  }
+  .start .muted {
+    color: #b7bcc4;
+    font-size: 0.875rem;
+  }
+  .start .btn--solid {
+    background: #fff;
+    color: #0e1014;
+    border-color: #fff;
+  }
+  .expand {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 8px;
+    background: rgb(255 255 255 / 0.85);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+  .expand[hidden] {
+    display: none;
+  }
+</style>

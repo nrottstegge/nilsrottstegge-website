@@ -1,0 +1,64 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { withBase } from '../lib/paths';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+const pageTitle = title ? `${title} · Nils Rottstegge` : 'Nils Rottstegge · HPC & GPU Computing';
+const desc =
+  description ??
+  'Nils Rottstegge, M.Sc. Computer Science student at ETH Zurich. High-performance computing, GPU computing, sparse linear algebra and adaptive trees.';
+const canonical = new URL(Astro.url.pathname, Astro.site!);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={desc} />
+    <meta name="theme-color" content="#fafaf8" />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href={withBase('/icon.svg')} type="image/svg+xml" />
+    <link rel="icon" href={withBase('/favicon.ico')} sizes="32x32" />
+    <link rel="apple-touch-icon" href={withBase('/apple-touch-icon.png')} />
+    <link rel="preload" href={withBase('/fonts/lato-900.woff2')} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={withBase('/fonts/lato-400.woff2')} as="font" type="font/woff2" crossorigin />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: fixed;
+    left: var(--gutter);
+    top: 8px;
+    z-index: 100;
+    padding: 0.5rem 0.9rem;
+    background: var(--fg);
+    color: var(--surface);
+    border-radius: 6px;
+    transform: translateY(-200%);
+  }
+  .skip:focus {
+    transform: none;
+  }
+</style>

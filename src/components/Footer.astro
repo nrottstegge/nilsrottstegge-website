@@ -1,0 +1,25 @@
+---
+import { contact } from '../data/profile';
+import { withBase } from '../lib/paths';
+---
+
+<footer class="footer">
+  <div class="wrap row">
+    <span>© {new Date().getFullYear()} {contact.name}</span>
+    <a href={withBase('/legal/')}>Privacy &amp; contact</a>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    border-top: 1px solid var(--line);
+    padding-block: 2rem;
+    font-size: 0.8125rem;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 2rem;
+    justify-content: space-between;
+  }
+</style>

@@ -1,0 +1,175 @@
+---
+import { withBase } from '../lib/paths';
+
+// Interactive version of the HBDIA figure from the thesis. `controls` adds the
+// threshold slider (project page); the compact variant is used in the tile.
+interface Props {
+  controls?: boolean;
+}
+
+const { controls = false } = Astro.props;
+---
+
+<div class:list={['hbdia', { compact: !controls }]} data-hbdia>
+  <div class="figure" data-figure>
+    <noscript>
+      <img src={withBase('/media/projects/hbdia.webp')} alt="HBDIA construction: dense matrix, DIA format, GPU blocks and CPU COO part." />
+    </noscript>
+  </div>
+  <div class="below">
+    <p class="info" data-info aria-live="polite">
+      Hover an entry to see where it lands. Columns are cut into blocks of 8; a diagonal with enough entries in a block goes
+      to the GPU, the rest to the CPU.
+    </p>
+    <p class="stats mono"><span class="bar"></span><span data-stats></span></p>
+    {
+      controls && (
+        <label class="threshold">
+          <span>
+            Threshold <b data-t>3</b>
+          </span>
+          <input type="range" min="1" max="8" value="3" />
+        </label>
+      )
+    }
+  </div>
+</div>
+
+<script>
+  import { whenNear } from '../scripts/lib/scroll';
+  for (const root of document.querySelectorAll<HTMLElement>('[data-hbdia]'))
+    whenNear(root, () => import('../scripts/hbdia').then((m) => m.mount(root)), '50% 0px');
+</script>
+
+<style>
+  .hbdia {
+    display: grid;
+    gap: 1rem;
+    padding: clamp(0.75rem, 2vw, 1.5rem);
+    background: var(--surface);
+  }
+  /* Reserve the figure's height (threshold 3) before the script draws it. */
+  .figure:not(:has(svg)) {
+    aspect-ratio: 1000 / 312;
+  }
+  .figure :global(svg) {
+    width: 100%;
+    height: auto;
+    outline-offset: 4px;
+    font-family: var(--mono);
+  }
+  .figure :global(.title) {
+    font: 700 15px var(--font);
+    fill: var(--fg);
+  }
+  .figure :global(.lbl) {
+    font-size: 10px;
+    fill: var(--muted);
+  }
+  .figure :global(.lbl.gpu) {
+    fill: var(--gpu);
+    font-weight: 700;
+  }
+  .figure :global(.lbl.cpu) {
+    fill: var(--cpu);
+    font-weight: 700;
+  }
+  .figure :global(.num) {
+    font-size: 10px;
+    fill: var(--fg);
+    pointer-events: none;
+  }
+  .figure :global(.frame) {
+    fill: none;
+    stroke: var(--line-strong);
+  }
+  .figure :global(.grid) {
+    stroke: var(--line);
+    stroke-width: 0.5;
+  }
+  .figure :global(.cut) {
+    stroke: var(--fg);
+    stroke-width: 1.5;
+  }
+  .figure :global(.pad) {
+    fill: #f0f0ee;
+  }
+  .figure :global(.e) {
+    cursor: pointer;
+    transition: opacity 0.15s, stroke-width 0.15s;
+  }
+  .hbdia:global(.is-intro) .figure :global(.e) {
+    animation: pop 0.45s var(--ease) backwards;
+    animation-delay: var(--d);
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hbdia:global(.is-intro) .figure :global(.e) {
+      animation: none;
+    }
+  }
+  .figure :global(.e.to-gpu) {
+    fill: var(--gpu);
+  }
+  .figure :global(.e.to-cpu) {
+    fill: var(--cpu);
+  }
+  .figure :global(.e.row) {
+    fill-opacity: 0.18;
+  }
+  .figure :global(svg.has-hot .e:not(.hot)) {
+    opacity: 0.25;
+  }
+  .figure :global(.e.hot) {
+    stroke: var(--fg);
+    stroke-width: 2;
+  }
+  .below {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .info {
+    min-height: 3em;
+    font-size: 0.9375rem;
+    color: var(--fg-2);
+  }
+  .info :global(.gpu) {
+    color: var(--gpu);
+  }
+  .info :global(.cpu) {
+    color: var(--cpu);
+  }
+  .stats {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.6875rem;
+    color: var(--muted);
+  }
+  .bar {
+    width: 80px;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--gpu) var(--gpu-share, 90%), var(--cpu) 0);
+  }
+  .threshold {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.9375rem;
+  }
+  .threshold input {
+    flex: 1;
+    max-width: 18rem;
+    accent-color: var(--fg);
+    min-height: 44px;
+  }
+  .compact .info {
+    font-size: 0.8125rem;
+    min-height: 4.2em;
+  }
+</style>

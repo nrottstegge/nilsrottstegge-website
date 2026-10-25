@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+node scripts/sync-cv.mjs
+git add -- public/cv/nils-rottstegge-cv.pdf

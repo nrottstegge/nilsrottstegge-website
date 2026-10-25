@@ -1,0 +1,186 @@
+---
+// Box colouring for symmetric Gauss-Seidel, as in the thesis (Section 3.3): in 2D with a
+// 9-point stencil, colour(i, j) = (i mod 3) + 3 (j mod 3) gives 9 colours; HPCG's
+// 27-point stencil in 3D needs 27. Points of one colour never share a stencil, so a
+// sweep updates all of them at once.
+const COLS = 12;
+const ROWS = 6;
+const C = 40;
+const PAD = 4;
+const PALETTE = ['#d1495b', '#2e86c1', '#3a9a5b', '#f39237', '#8e5bb5', '#e2b714', '#1fa3a8', '#8a5a3b', '#5a6270'];
+const cells = Array.from({ length: COLS * ROWS }, (_, k) => {
+  const i = k % COLS;
+  const j = Math.floor(k / COLS);
+  return { i, j, c: (i % 3) + 3 * (j % 3) };
+});
+---
+
+<figure class="boxc" data-boxc data-cell={C} data-pad={PAD}>
+  <svg viewBox={`0 0 ${COLS * C + 2 * PAD} ${ROWS * C + 2 * PAD}`} role="img" aria-labelledby="boxc-title">
+    <title id="boxc-title">Box colouring of a 12 by 6 grid with 9 colours; points of the same colour never neighbour each other.</title>
+    {
+      cells.map((p) => (
+        <rect
+          x={PAD + p.i * C + 2}
+          y={PAD + p.j * C + 2}
+          width={C - 4}
+          height={C - 4}
+          rx="3"
+          fill={PALETTE[p.c]}
+          class="cell"
+          data-i={p.i}
+          data-j={p.j}
+          data-c={p.c}
+        />
+      ))
+    }
+    <rect class="stencil" x="0" y="0" width={3 * C} height={3 * C} rx="5" />
+  </svg>
+  <div class="controls">
+    <button class="btn" data-play aria-pressed="false">Pause</button>
+    <span class="mono sweep" data-sweep aria-live="polite">Sweep 1 of 9</span>
+  </div>
+  <p class="info" data-info>
+    Hover a point: its 9-point stencil covers 9 different colours, so all points of one colour can be updated in the
+    same sweep.
+  </p>
+</figure>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>('[data-boxc]')) {
+    const cellsEls = [...root.querySelectorAll<SVGRectElement>('.cell')];
+    const stencil = root.querySelector<SVGRectElement>('.stencil')!;
+    const sweepEl = root.querySelector<HTMLElement>('[data-sweep]')!;
+    const info = root.querySelector<HTMLElement>('[data-info]')!;
+    const play = root.querySelector<HTMLButtonElement>('[data-play]')!;
+    const idle = info.textContent!.trim();
+    const cell = Number(root.dataset.cell);
+    const pad = Number(root.dataset.pad);
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let sweep = 0;
+    let timer = 0;
+    let playing = !reduce;
+
+    const showSweep = (s: number) => {
+      sweep = s;
+      root.classList.add('sweeping');
+      cellsEls.forEach((el) => {
+        const c = Number(el.dataset.c);
+        el.classList.toggle('now', c === s);
+        el.classList.toggle('done', c < s);
+      });
+      sweepEl.textContent = `Sweep ${s + 1} of 9: ${cellsEls.filter((e) => Number(e.dataset.c) === s).length} points updated at once`;
+    };
+    const tick = () => showSweep((sweep + 1) % 9);
+    const start = () => {
+      stop();
+      timer = window.setInterval(tick, 900);
+      playing = true;
+      play.textContent = 'Pause';
+      play.setAttribute('aria-pressed', 'false');
+    };
+    const stop = () => {
+      window.clearInterval(timer);
+      playing = false;
+      play.textContent = 'Play sweeps';
+      play.setAttribute('aria-pressed', 'true');
+    };
+    play.addEventListener('click', () => (playing ? stop() : start()));
+
+    // Hover: show the stencil of one point and every point of its colour.
+    const svg = root.querySelector('svg')!;
+    svg.addEventListener('pointerover', (ev) => {
+      const t = (ev.target as Element).closest<SVGRectElement>('.cell');
+      if (!t) return;
+      const i = Number(t.dataset.i);
+      const j = Number(t.dataset.j);
+      const c = Number(t.dataset.c);
+      root.classList.add('probing');
+      cellsEls.forEach((el) => el.classList.toggle('same', Number(el.dataset.c) === c));
+      stencil.setAttribute('x', String(pad + (i - 1) * cell));
+      stencil.setAttribute('y', String(pad + (j - 1) * cell));
+      stencil.classList.add('on');
+      info.textContent = `Point (${i}, ${j}) has colour ${c + 1}. Its stencil reads 8 neighbours, all with other colours, so every point of colour ${c + 1} can be updated at the same time.`;
+    });
+    svg.addEventListener('pointerleave', () => {
+      root.classList.remove('probing');
+      stencil.classList.remove('on');
+      info.textContent = idle;
+    });
+
+    const io = new IntersectionObserver((r) => {
+      const visible = r[0].isIntersecting;
+      if (visible && playing && !timer) start();
+      if (!visible && timer) {
+        window.clearInterval(timer);
+        timer = 0;
+      }
+    });
+    io.observe(root);
+    showSweep(0);
+    if (reduce) stop();
+  }
+</script>
+
+<style>
+  .boxc {
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+    padding: clamp(1rem, 2.5vw, 1.75rem);
+    background: var(--surface);
+  }
+  svg {
+    width: 100%;
+    height: auto;
+  }
+  .cell {
+    transition: opacity 0.3s, transform 0.3s;
+    transform-box: fill-box;
+    transform-origin: center;
+    cursor: crosshair;
+  }
+  .boxc:global(.sweeping) .cell {
+    opacity: 0.18;
+  }
+  .boxc:global(.sweeping) .cell:global(.done) {
+    opacity: 0.55;
+  }
+  .boxc:global(.sweeping) .cell:global(.now) {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  .boxc:global(.probing) .cell {
+    opacity: 0.15 !important;
+    transform: none !important;
+  }
+  .boxc:global(.probing) .cell:global(.same) {
+    opacity: 1 !important;
+  }
+  .stencil {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 2.5;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .stencil:global(.on) {
+    opacity: 1;
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .sweep {
+    color: var(--fg-2);
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+  .info {
+    font-size: 0.9375rem;
+    color: var(--fg-2);
+    min-height: 3em;
+  }
+</style>
