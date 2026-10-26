@@ -6,7 +6,7 @@ demonstrations and a downloadable CV.
 
 Built with Astro and TypeScript.
 
-Website: [nrottstegge.github.io/nilsrottstegge-website](https://nrottstegge.github.io/nilsrottstegge-website/)
+Website: [nilsrottstegge.com](https://nilsrottstegge.com/)
 
 ## Development
 

@@ -1,8 +1,8 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  site: 'https://nrottstegge.github.io',
-  base: '/nilsrottstegge-website',
+  site: 'https://nilsrottstegge.com',
+  base: '/',
   trailingSlash: 'always',
   prefetch: { prefetchAll: false, defaultStrategy: 'hover' },
   build: { inlineStylesheets: 'always' },
